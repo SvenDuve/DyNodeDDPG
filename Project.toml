@@ -1,0 +1,4 @@
+name = "DyNodeDDPG"
+uuid = "42c18925-733e-4062-93e6-6eb07e6dc1fc"
+authors = ["Sven Duve <svenduve@gmail.com>"]
+version = "0.1.0"
