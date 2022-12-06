@@ -17,7 +17,7 @@ include("neuralnetworks.jl")
 include("node.jl")
 
 
-export Parameters, greetings
+export Parameters, AgentPolicy, greetings
 
 #greet() = print("Hello World!")
 
