@@ -21,3 +21,15 @@ function setNetwork(nn::Actor)
     return m
 
 end
+
+
+
+function setNetwork(nn::Rewards)
+
+    m = Chain(Dense(p.state_size + p.action_size, p.reward_hidden[1][1], relu),
+        Chain([Dense(el[1], el[2], relu) for el in p.reward_hidden]...),
+        Dense(p.reward_hidden[end][2], 1, tanh))
+
+    return m
+
+end

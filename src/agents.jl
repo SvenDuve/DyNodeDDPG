@@ -40,7 +40,7 @@ function trainAgent(pms::Parameter, agent::DDPGAgent)
 
     while e <= p.max_episodes
 
-        ep = Episode(env, AgentPolicy(), p)()
+        ep = Episode(env, agent, p)()
 
 
         for (s, a, r, s′, t) in ep.episode
@@ -83,3 +83,37 @@ function trainAgent(pms::Parameter, agent::DDPGAgent)
 end #trainAgent
 
 
+
+function dyNode(m::DyNodeModel, pms::Parameter)
+
+    gym = pyimport("gym")
+    global env = gym.make(pms.environment)
+    global p = resetParameters(pms)
+
+
+    # set buffer
+    global 𝒟_dyNode = []
+
+    fθ = setNode(m, p)
+
+    R̂ = setNetwork(Rewards())
+    @show params(R̂)
+
+
+
+    for i in 1:p.Sequences
+        ep = Episode(env, m, p)()
+        @show size(ep.episode)
+        append!(𝒟_dyNode, [ep.episode])
+    end
+
+    @show size(𝒟_dyNode)
+    # initialise model
+
+
+
+    # initialse value
+
+
+    return 𝒟_dyNode
+end

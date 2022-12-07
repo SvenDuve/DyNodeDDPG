@@ -4,6 +4,8 @@
     state_size::Int = 2
     action_size::Int = 1
     action_bound::Float64 = 1.0
+    action_bound_high::Array = [1.0]
+    action_bound_low::Array = [-1.0]
     batch_size::Int = 128
     mem_size::Int = 1000000
     frames::Int = 0
@@ -11,10 +13,15 @@
     max_episodes_length::Int = 1000
     critic_hidden::Array = [(200, 200)]
     actor_hidden::Array = [(200, 200)]
+    reward_hidden::Array = [(200, 200)]
     γ::Float64 = 0.99
     τ::Float64 = 0.001
     η_actor::Float64 = 0.0001
     η_critic::Float64 = 0.001
+    Sequences::Int = 10
+    H::Int = 200
+    m::Int = 1000
+    dT::Float64 = 0.01
 end
 
 
@@ -23,12 +30,31 @@ end
 function resetParameters(p)
     newP = Parameter(p; state_size=env.observation_space.shape[1],
         action_size=env.action_space.shape[1],
-        action_bound=env.action_space.high[1])
+        action_bound=env.action_space.high[1],
+        action_bound_high=env.action_space.high,
+        action_bound_low=env.action_space.low)
     return newP
 end
 
 
-mutable struct DDPGAgent end
+mutable struct DDPGAgent
+
+    train::Bool
+
+    function DDPGAgent(train=true)
+        new(train)
+    end
+end
+
+mutable struct DyNodeModel
+
+    train::Bool
+
+    function DyNodeModel(train=true)
+        new(train)
+    end
+
+end
 
 
 mutable struct AgentPolicy
@@ -40,9 +66,12 @@ mutable struct AgentPolicy
     end
 end
 
+
 mutable struct Critic end
 
 mutable struct Actor end
+
+mutable struct Rewards end
 
 
 
@@ -60,11 +89,13 @@ function 𝒩(ou::OrnsteinUhlenbeck)
     ou.X = ou.X .+ dx
 end
 
+
 global ou = OrnsteinUhlenbeck(0.0f0, 0.15f0, 0.2f0, [0.0f0])
+
 
 mutable struct Episode
     env::PyObject
-    π::AgentPolicy
+    π
     p::Parameter
     total_reward::Float64 # total reward of the episode
     last_reward::Float64
@@ -73,12 +104,12 @@ mutable struct Episode
     maxn::Int       # max steps in an episode - should be constant during an episode
     episode::Array
 
-    function Episode(env::PyObject, π::AgentPolicy, p::Parameter)
+    function Episode(env::PyObject, π, p::Parameter)
 
         total_reward, last_reward = 0.0, 0.0
         niter = 1
         freq = 1
-        maxn = 1000
+        maxn = p.max_episodes_length
         episode = []
         new(env, π, p, total_reward, last_reward, niter, freq, maxn, episode)
     end
@@ -117,9 +148,19 @@ end
 
 
 
-function action(π::AgentPolicy, s::Vector{Float32}, p::Parameter)
+function action(π::DDPGAgent, s::Vector{Float32}, p::Parameter)
     vcat(clamp.(μϕ(s) .+ vcat([𝒩(ou) for i in 1:p.action_size]...) * π.train, -p.action_bound, p.action_bound)...)
 end
+
+
+
+function action(π::DyNodeModel, s::Vector{Float32}, p::Parameter)
+
+    return [rand((el[1]:0.01:el[2])) |> Float32 for el in zip(p.action_bound_low, p.action_bound_high)]
+
+end
+
+
 
 
 function greetings()

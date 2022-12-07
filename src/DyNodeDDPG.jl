@@ -24,7 +24,16 @@ include("loss.jl")
 
 #import trainAgent
 
-export Parameter, DDPGAgent, AgentPolicy, trainAgent, greetings, action, Critic, setNetwork
+export Parameter,
+    DDPGAgent,
+    DyNodeModel,
+    AgentPolicy,
+    trainAgent,
+    greetings,
+    action,
+    Critic,
+    setNetwork,
+    dyNode
 
 #greet() = print("Hello World!")
 
