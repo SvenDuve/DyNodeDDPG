@@ -11,13 +11,16 @@ using NNlib, Random, Zygote
 using Conda, PyCall
 
 
+
+
 include("base.jl")
 include("buffer.jl")
 include("neuralnetworks.jl")
 include("node.jl")
+include("training.jl")
 
 
-export Parameters, AgentPolicy, greetings
+export Parameters, DDPGAgent, AgentPolicy, trainAgent, greetings, action, Critic, setNetwork
 
 #greet() = print("Hello World!")
 
