@@ -1,25 +1,32 @@
 
-
-mutable struct Parameters
-    environment::String
-    state_size::Int
-    action_size::Int
-    action_bound::Float64
-    batch_size::Int
-    mem_size::Int
-    frames::Int
-    max_episodes::Int
-    max_episodes_length::Int
-    critic_hidden::Array
-    actor_hidden::Array
-    γ::Float64
-    τ::Float64
-    η_actor::Float64
-    η_critic::Float64
-    function Parameters()
-        new()
-    end
+@with_kw mutable struct Parameter
+    environment::String = "MountainCarContinuous-v0"
+    state_size::Int = 2
+    action_size::Int = 1
+    action_bound::Float64 = 1.0
+    batch_size::Int = 128
+    mem_size::Int = 1000000
+    frames::Int = 0
+    max_episodes::Int = 2000
+    max_episodes_length::Int = 1000
+    critic_hidden::Array = [(200, 200)]
+    actor_hidden::Array = [(200, 200)]
+    γ::Float64 = 0.99
+    τ::Float64 = 0.001
+    η_actor::Float64 = 0.0001
+    η_critic::Float64 = 0.001
 end
+
+
+
+
+function resetParameters(p)
+    newP = Parameter(p; state_size=env.observation_space.shape[1],
+        action_size=env.action_space.shape[1],
+        action_bound=env.action_space.high[1])
+    return newP
+end
+
 
 mutable struct DDPGAgent end
 
@@ -47,9 +54,18 @@ mutable struct OrnsteinUhlenbeck
 end
 
 
+function 𝒩(ou::OrnsteinUhlenbeck)
+    dx = ou.θ .* (ou.μ .- ou.X)
+    dx = dx .+ ou.σ .* randn(Float32, length(ou.X))
+    ou.X = ou.X .+ dx
+end
+
+global ou = OrnsteinUhlenbeck(0.0f0, 0.15f0, 0.2f0, [0.0f0])
+
 mutable struct Episode
     env::PyObject
     π::AgentPolicy
+    p::Parameter
     total_reward::Float64 # total reward of the episode
     last_reward::Float64
     niter::Int     # current step in this episode
@@ -57,13 +73,14 @@ mutable struct Episode
     maxn::Int       # max steps in an episode - should be constant during an episode
     episode::Array
 
-    function Episode(env::PyObject, π::AgentPolicy)
+    function Episode(env::PyObject, π::AgentPolicy, p::Parameter)
+
         total_reward, last_reward = 0.0, 0.0
         niter = 1
         freq = 1
         maxn = 1000
         episode = []
-        new(env, π, total_reward, last_reward, niter, freq, maxn, episode)
+        new(env, π, p, total_reward, last_reward, niter, freq, maxn, episode)
     end
 end
 
@@ -79,7 +96,7 @@ function (e::Episode)()
     t::Bool = false
 
     for i in 1:e.maxn
-        a = action(e.π, s)
+        a = action(e.π, s, e.p)
         s′, r, t, _ = e.env.step(a)
         #@show a, s′, r, t
         e.total_reward += r
@@ -100,7 +117,7 @@ end
 
 
 
-function action(π::AgentPolicy, s::Vector{Float32})
+function action(π::AgentPolicy, s::Vector{Float32}, p::Parameter)
     vcat(clamp.(μϕ(s) .+ vcat([𝒩(ou) for i in 1:p.action_size]...) * π.train, -p.action_bound, p.action_bound)...)
 end
 
