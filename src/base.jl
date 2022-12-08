@@ -7,7 +7,8 @@
     action_bound_high::Array = [1.0]
     action_bound_low::Array = [-1.0]
     batch_size::Int = 128
-    mem_size::Int = 1000000
+    batch_length::Int = 40
+    mem_size::Int = 100000
     frames::Int = 0
     max_episodes::Int = 2000
     max_episodes_length::Int = 1000

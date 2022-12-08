@@ -1,5 +1,5 @@
 
-function trainAgent(pms::Parameter, agent::DDPGAgent)
+function trainAgent(agent::DDPGAgent, pms::Parameter)
     #@show pms
     println("Welcome to this function.")
     gym = pyimport("gym")
@@ -86,6 +86,12 @@ end #trainAgent
 
 function dyNode(m::DyNodeModel, pms::Parameter)
 
+    # To Do's:
+    # to set up dynode_batch_size -> 64 in the paper
+
+    # interactions with the real World
+
+
     gym = pyimport("gym")
     global env = gym.make(pms.environment)
     global p = resetParameters(pms)
@@ -95,25 +101,23 @@ function dyNode(m::DyNodeModel, pms::Parameter)
     global 𝒟_dyNode = []
 
     fθ = setNode(m, p)
-
     R̂ = setNetwork(Rewards())
-    @show params(R̂)
 
 
 
     for i in 1:p.Sequences
         ep = Episode(env, m, p)()
-        @show size(ep.episode)
-        append!(𝒟_dyNode, [ep.episode])
+        append!(𝒟_dyNode, ep.episode)
     end
 
     @show size(𝒟_dyNode)
     # initialise model
 
+    slices = sampleBuffer(m)
 
 
     # initialse value
 
 
-    return 𝒟_dyNode
+    return 𝒟_dyNode, slices
 end
