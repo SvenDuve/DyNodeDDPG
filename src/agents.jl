@@ -98,26 +98,27 @@ function dyNode(m::DyNodeModel, pms::Parameter)
 
 
     # set buffer
-    global 𝒟_dyNode = []
+    global 𝒟 = []
 
-    fθ = setNode(m, p)
-    R̂ = setNetwork(Rewards())
+    global fθ = setNode(m, p)
+    global Rϕ = setNetwork(Rewards())
 
-
+    # global optR = Flux.setup(Optimise.Adam(), Rϕ)#` and pass this `opt` to `train!
+    global opt_model = Optimise.Adam(0.001)
+    global opt_reward = Optimise.Adam(0.001)
 
     for i in 1:p.Sequences
         ep = Episode(env, m, p)()
-        append!(𝒟_dyNode, ep.episode)
+        for (s, a, r, s′, t) in ep.episode
+            remember(p.mem_size, s, a, r, s′, t)
+        end
+
+        train(m)
+        if i % 10 == 0
+            println("Iteration $i")
+        end
     end
 
-    @show size(𝒟_dyNode)
-    # initialise model
+    return fθ, Rϕ
 
-    slices = sampleBuffer(m)
-
-
-    # initialse value
-
-
-    return 𝒟_dyNode, slices
 end

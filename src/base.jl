@@ -157,8 +157,8 @@ end
 
 function action(π::DyNodeModel, s::Vector{Float32}, p::Parameter)
 
-    return [rand((el[1]:0.01:el[2])) |> Float32 for el in zip(p.action_bound_low, p.action_bound_high)]
-
+    # return [rand((el[1]:0.01:el[2])) |> Float32 for el in zip(p.action_bound_low, p.action_bound_high)]
+    return env.action_space.sample()
 end
 
 

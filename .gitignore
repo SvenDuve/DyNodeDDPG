@@ -24,3 +24,5 @@ docs/site/
 Manifest.toml
 
 playground.jl
+workingNode.jl
+luxNode.jl

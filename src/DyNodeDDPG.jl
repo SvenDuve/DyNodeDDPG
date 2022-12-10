@@ -10,7 +10,9 @@ using Distributions
 import StatsBase.sample
 import StatsBase.AnalyticWeights
 using NNlib, Random, Zygote
+import Zygote.Buffer
 using Conda, PyCall
+using DiffEqFlux, DifferentialEquations
 
 
 
@@ -25,15 +27,30 @@ include("loss.jl")
 #import trainAgent
 
 export Parameter,
+    resetParameters,
     DDPGAgent,
     DyNodeModel,
     AgentPolicy,
+    Critic,
+    Actor,
+    Rewards,
+    OrnsteinUhlenbeck,
+    𝒩,
+    Episode,
+    action,
+    remember,
+    sampleBuffer,
+    lossCritic,
+    maxActor,
+    lossReward,
+    setNetwork,
+    setNode,
+    train,
     trainAgent,
     greetings,
-    action,
-    Critic,
-    setNetwork,
-    dyNode
+    dyNode,
+    transition
+
 
 #greet() = print("Hello World!")
 
