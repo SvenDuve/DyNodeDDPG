@@ -100,12 +100,13 @@ function dyNode(m::DyNodeModel, pms::Parameter)
     # set buffer
     global 𝒟 = []
 
-    global fθ = setNode(m, p)
+    # global fθ = setNode(m, p)
+    global fθ = setNetwork(m) # Code up a Network that will be solved with euler steps
     global Rϕ = setNetwork(Rewards())
 
     # global optR = Flux.setup(Optimise.Adam(), Rϕ)#` and pass this `opt` to `train!
-    global opt_model = Optimise.Adam(0.001)
-    global opt_reward = Optimise.Adam(0.001)
+    # global opt_model = Optimise.Adam(0.005)
+    # global opt_reward = Optimise.Adam(0.005)
 
     for i in 1:p.Sequences
         ep = Episode(env, m, p)()
@@ -119,6 +120,6 @@ function dyNode(m::DyNodeModel, pms::Parameter)
         end
     end
 
-    return fθ, Rϕ
+    return fθ, Rϕ, 𝒟
 
 end

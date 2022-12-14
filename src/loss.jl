@@ -39,6 +39,23 @@ function lossReward(m::DyNodeModel, s, a, r, s′)
     return reward_loss
 end
 
+function dyNodeLoss(m::DyNodeModel, S, A, R, S′)
+
+    Ŝ = Zygote.Buffer(Array{Float64}(undef, p.state_size, p.batch_length, p.batch_size))
+    R̂ = Zygote.Buffer(Array{Float64}(undef, 1, p.batch_length, p.batch_size))
+
+    for i in 1:p.batch_size
+        @show i
+        Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
+
+    end
+
+    return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(copy(S′) - copy(Ŝ)))
+
+end
+
+
+
 
 # function transition(m::DyNodeModel, s, a, r, s′)
 #     # ŝ = Buffer(s, size(s))

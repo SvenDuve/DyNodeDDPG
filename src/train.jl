@@ -31,73 +31,56 @@ end
 function train(m::DyNodeModel)
 
     S, A, R, S′ = sampleBuffer(m)
-    Ŝ = []
-    R̂ = []
-    model_loss = 0
-    reward_loss = 0
-    for i in 1:p.batch_size
-        # ŝ = []
-        # r̂ = []
-        ŝ, r̂ = transition(S[:,:,i], A[:,:,i], R[:,:,i], S′[:,:,i])
-        # state = S[:,1,i]
-        # ŝ = [fθ(vcat(vcat(state...), action)) for action in A[:,:,i]]
-        # r̂ = [Rϕ(vcat(vcat(S′[:, k, i]...), action)) for (k, action) in enumerate(A[:,:,i])]
-        # for action in a
-        #     state = fθ(vcat(vcat(state...), action))
-        #     append!(ŝ, [state])
-        # end
-        # @show size(R[:,:,i]), R[:,:,i] 
 
-        θ = params(fθ)
-        dθ = gradient(() -> Flux.mse(vcat(hcat(ŝ...)), S′[:,:,i]), θ)
-        update!(opt_model, params(fθ), dθ)
+
+    # Ŝ = Array{Float64}(undef, p.state_size, p.batch_length, p.batch_size)
+    # R̂ = Array{Float64}(undef, 1, p.batch_length, p.batch_size)
+    model_loss = []
+    reward_loss = []
+    # for i in 1:p.batch_size
+
+    #     Ŝ[:,:,i], R̂[:,:,i] = transition(S[:,:,i], A[:,:,i], R[:,:,i], S′[:,:,i])
+
+    # end
+
+
+    θ = params(fθ)
+#    dθ = gradient(() -> Flux.mse(vcat(hcat(ŝ...)), S′[:,:,i]), θ)
+    dθ = gradient(() -> dyNodeLoss(m, S, A, R, S′), θ)
+    update!(Optimise.Adam(0.005), params(fθ), dθ)
+    @show θ == params(fθ)
     
-        ϕ = params(Rϕ)
-        dϕ = gradient(() -> Flux.mse(hcat(r̂...), R[:,:,i]), ϕ)
-        update!(opt_reward, params(Rϕ), dϕ)
-    
-        model_loss = Flux.mse(vcat(hcat(ŝ...)), S′[:,:,i])
-        reward_loss = Flux.mse(hcat(r̂...), R[:,:,i])
+    ϕ = params(Rϕ)
+    dϕ = gradient(() -> Flux.mse(R̂, R), ϕ)
+    update!(Optimise.Adam(0.005), params(Rϕ), dϕ)
+    @show ϕ == params(Rϕ)
 
-        append!(Ŝ, ŝ)
-        append!(R̂, r̂)
-        
-    end
-    
-    
-    # θ = params(fθ)
-    # dθ = gradient(() -> Flux.mse(vcat(hcat(Ŝ...)), S′), θ)
-    # update!(opt_model, params(fθ), dθ)
+    append!(model_loss, dyNodeLoss(m, S, A, R, S′))
+    append!(reward_loss, Flux.mse(R̂, R))
 
-    # ϕ = params(Rϕ)
-    # dϕ = gradient(() -> Flux.mse(hcat(R̂...), R), ϕ)
-    # update!(opt_reward, params(Rϕ), dϕ)
+    @show mean(model_loss)
+    @show mean(reward_loss)
 
-    # model_loss = Flux.mse(vcat(hcat(Ŝ...)), S′)
-    # reward_loss = Flux.mse(hcat(R̂...), R)
-
-    @show model_loss
-    @show reward_loss
-
-    return -1
 end
 
 
 
 function transition(s, a, r, s′)
 
-    ŝ = []
-    r̂ = []
+    ŝ = Zygote.Buffer(Array{Float64}(undef, p.state_size, p.batch_length))
+    r̂ = Zygote.Buffer(Array{Float64}(undef, 1, p.batch_length))
     state = s[:,1]
     for (i, action) in enumerate(a)
-        state = fθ(vcat(vcat(state...), action))
-        append!(ŝ, [state])
+
+        state = solveDyNodeStep(fθ, state, action)
+        ŝ[:,i] = state
         reward = Rϕ(vcat(vcat(s′[:,i]...), action))
-        append!(r̂, reward)
+        r̂[:,i] = reward
     end
 
-    return (ŝ, r̂)
+    return (copy(ŝ), copy(r̂))
 end
+
 
 
 # callback() = begin

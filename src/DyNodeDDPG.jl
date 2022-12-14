@@ -23,6 +23,7 @@ include("node.jl")
 include("train.jl")
 include("agents.jl")
 include("loss.jl")
+include("solver.jl")
 
 #import trainAgent
 
@@ -49,7 +50,9 @@ export Parameter,
     trainAgent,
     greetings,
     dyNode,
-    transition
+    transition,
+    solveDyNodeStep,
+    dyNodeLoss
 
 
 #greet() = print("Hello World!")
