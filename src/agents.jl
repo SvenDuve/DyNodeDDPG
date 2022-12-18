@@ -114,10 +114,13 @@ function dyNode(m::DyNodeModel, pms::Parameter)
             remember(p.mem_size, s, a, r, s′, t)
         end
 
-        train(m)
+        model_loss, reward_loss = train(m)
+        # alt_train(m)
         if i % 10 == 0
             println("Iteration $i")
         end
+        append!(p.model_loss, model_loss)
+        append!(p.reward_loss, reward_loss)
     end
-
+    return p
 end

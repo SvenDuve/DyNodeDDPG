@@ -23,6 +23,8 @@
     H::Int = 200
     m::Int = 1000
     dT::Float64 = 0.01
+    model_loss::Array = []
+    reward_loss::Array = []
 end
 
 

@@ -47,11 +47,34 @@ function dyNodeLoss(m::DyNodeModel, S, A, R, S′)
     #    Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
     end
 
-    return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(copy(Ŝ) - S′))
+    # return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(copy(Ŝ) - S′))
+    return sum(abs.(copy(Ŝ) - S′))
 
 end
 
+# function alt_dyNodeLoss(m::DyNodeModel, S, A, R, S′)
 
+#     Ŝ = Zygote.Buffer(S)
+#     R̂ = Zygote.Buffer(R)
+
+#     for j in collect(1:size(A)[3])
+
+#         Ŝ[:,:,j], R̂[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])
+
+#     #    Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
+#     end
+#     @show size(copy(Ŝ))
+#     @show size(copy(R̂))
+#     return copy(Ŝ), copy(R̂)
+
+# end
+
+
+# function alt_modelLoss(Ŝ, S′)
+
+#     return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(Ŝ - S′))
+
+# end
 
 
 function transition(s, a, r)

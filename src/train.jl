@@ -32,9 +32,6 @@ function train(m::DyNodeModel)
 
     S, A, R, S′ = sampleBuffer(m)
 
-
-    # Ŝ = Array{Float64}(undef, p.state_size, p.batch_length, p.batch_size)
-    # R̂ = Array{Float64}(undef, 1, p.batch_length, p.batch_size)
     model_loss = []
     reward_loss = []
     # for i in 1:p.batch_size
@@ -44,14 +41,15 @@ function train(m::DyNodeModel)
     # end
 
 
-    θ = params(fθ)
-#    dθ = gradient(() -> Flux.mse(vcat(hcat(ŝ...)), S′[:,:,i]), θ)
-    dθ = gradient(() -> dyNodeLoss(m, S, A, R, S′), θ)
+    θ = deepcopy(params(fθ))
+    dθ = gradient(() -> dyNodeLoss(m, S, A, R, S′), params(fθ))
     update!(Optimise.Adam(0.005), params(fθ), dθ)
+    @show θ == params(fθ)
+
 
     
-    ϕ = params(Rϕ)
-    dϕ = gradient(() -> rewardLoss(m, S, A, R, S′), ϕ)
+    ϕ = deepcopy(params(Rϕ))
+    dϕ = gradient(() -> rewardLoss(m, S, A, R, S′), params(Rϕ))
     update!(Optimise.Adam(0.005), params(Rϕ), dϕ)
     @show ϕ == params(Rϕ)
 
@@ -61,6 +59,11 @@ function train(m::DyNodeModel)
     @show mean(model_loss)
     @show mean(reward_loss)
 
+    return model_loss, reward_loss
+
 end
+
+
+
 
 
