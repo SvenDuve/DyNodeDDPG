@@ -47,12 +47,12 @@ function train(m::DyNodeModel)
     θ = params(fθ)
 #    dθ = gradient(() -> Flux.mse(vcat(hcat(ŝ...)), S′[:,:,i]), θ)
     dθ = gradient(() -> dyNodeLoss(m, S, A, R, S′), θ)
-    update!(Optimise.Adam(0.05), params(fθ), dθ)
+    update!(Optimise.Adam(0.005), params(fθ), dθ)
 
     
     ϕ = params(Rϕ)
     dϕ = gradient(() -> rewardLoss(m, S, A, R, S′), ϕ)
-    update!(Optimise.Adam(0.05), params(Rϕ), dϕ)
+    update!(Optimise.Adam(0.005), params(Rϕ), dϕ)
     @show ϕ == params(Rϕ)
 
     append!(model_loss, dyNodeLoss(m, S, A, R, S′))

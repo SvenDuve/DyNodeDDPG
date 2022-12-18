@@ -19,14 +19,12 @@ end
 
 function rewardLoss(m::DyNodeModel, S, A, R, S′)
 
-    Ŝ = Zygote.Buffer(S)
     R̂ = Zygote.Buffer(R)
 
     for j in collect(1:size(A)[3])
 
-        Ŝ[:,:,j], R̂[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])
+        R̂[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])[2]
 
-    #    Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
     end
 
     return Flux.mse(copy(R̂), R)
@@ -41,16 +39,15 @@ end
 function dyNodeLoss(m::DyNodeModel, S, A, R, S′)
 
     Ŝ = Zygote.Buffer(S)
-    R̂ = Zygote.Buffer(R)
 
     for j in collect(1:size(A)[3])
 
-        Ŝ[:,:,j], R̂[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])
+        Ŝ[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])[1]
 
     #    Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
     end
 
-    return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(copy(S′) - copy(Ŝ)))
+    return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(copy(Ŝ) - S′))
 
 end
 
@@ -68,17 +65,6 @@ function transition(s, a, r)
         r̂[:,i] = Rϕ(vcat(s[:,i], a[:,i]))
     end
     
-    # r̂ = Zygote.Buffer(Array{Float64}(undef, 1, p.batch_length))
-
-    # for (i, action) in enumerate(a)
-
-    #     state = solveDyNodeStep(fθ, state, action)
-    #     ŝ[:,i] = state
-    #     reward = Rϕ(vcat(vcat(s′[:,i]...), action))
-    #     r̂[:,i] = reward
-    # end
-
-    # return (copy(ŝ), copy(r̂))
     return copy(ŝ), copy(r̂)
 end
 
