@@ -41,17 +41,12 @@ function train(m::DyNodeModel)
     # end
 
 
-    θ = deepcopy(params(fθ))
     dθ = gradient(() -> dyNodeLoss(m, S, A, R, S′), params(fθ))
     update!(Optimise.Adam(0.005), params(fθ), dθ)
-    @show θ == params(fθ)
 
 
-    
-    ϕ = deepcopy(params(Rϕ))
     dϕ = gradient(() -> rewardLoss(m, S, A, R, S′), params(Rϕ))
     update!(Optimise.Adam(0.005), params(Rϕ), dϕ)
-    @show ϕ == params(Rϕ)
 
     append!(model_loss, dyNodeLoss(m, S, A, R, S′))
     append!(reward_loss, rewardLoss(m, S, A, R, S′))
