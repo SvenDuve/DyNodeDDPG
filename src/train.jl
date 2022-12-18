@@ -47,16 +47,16 @@ function train(m::DyNodeModel)
     θ = params(fθ)
 #    dθ = gradient(() -> Flux.mse(vcat(hcat(ŝ...)), S′[:,:,i]), θ)
     dθ = gradient(() -> dyNodeLoss(m, S, A, R, S′), θ)
-    update!(Optimise.Adam(0.005), params(fθ), dθ)
-    @show θ == params(fθ)
+    update!(Optimise.Adam(0.05), params(fθ), dθ)
+
     
     ϕ = params(Rϕ)
-    dϕ = gradient(() -> Flux.mse(R̂, R), ϕ)
-    update!(Optimise.Adam(0.005), params(Rϕ), dϕ)
+    dϕ = gradient(() -> rewardLoss(m, S, A, R, S′), ϕ)
+    update!(Optimise.Adam(0.05), params(Rϕ), dϕ)
     @show ϕ == params(Rϕ)
 
     append!(model_loss, dyNodeLoss(m, S, A, R, S′))
-    append!(reward_loss, Flux.mse(R̂, R))
+    append!(reward_loss, rewardLoss(m, S, A, R, S′))
 
     @show mean(model_loss)
     @show mean(reward_loss)
@@ -64,27 +64,3 @@ function train(m::DyNodeModel)
 end
 
 
-
-function transition(s, a, r, s′)
-
-    ŝ = Zygote.Buffer(Array{Float64}(undef, p.state_size, p.batch_length))
-    r̂ = Zygote.Buffer(Array{Float64}(undef, 1, p.batch_length))
-    state = s[:,1]
-    for (i, action) in enumerate(a)
-
-        state = solveDyNodeStep(fθ, state, action)
-        ŝ[:,i] = state
-        reward = Rϕ(vcat(vcat(s′[:,i]...), action))
-        r̂[:,i] = reward
-    end
-
-    return (copy(ŝ), copy(r̂))
-end
-
-
-
-# callback() = begin
-#     global iter += 1
-#     if iter % 10 == 1
-
-# end

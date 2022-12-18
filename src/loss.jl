@@ -8,46 +8,46 @@ function maxActor(S::Matrix{Float32})
     Qθ(vcat(S, μϕ(S))) |> sum |> mean
 end
 
-# function lossModel(m::DyNodeModel, s, a, r, s′)
-#     @show size(r)
-#     ŝ = []
-#     state = s[:, 1]
-#     for (i, action) in enumerate(a)
-#         state = fθ(vcat(vcat(state...), action))
-#         append!(ŝ, [state])
-#     end
-#     # @show vcat(hcat(ŝ...))
-#     model_loss = Flux.mse(vcat(hcat(ŝ...)), s′)
-
-#     return model_loss, ŝ
-# end
 
 
-# function lossReward(m::DyNodeModel, s, a, r, s′)
-#     r̂ = []
-#     for (i, action) in enumerate(a)
-#         reward = Rϕ(vcat(vcat(s′[:, i]...), action))
-#         append!(r̂, reward)
-#     end
-
-#     reward_loss = Flux.mse(reshape(r̂, (1, 5)), r)
-#     return reward_loss, r̂
-# end
 function lossReward(m::DyNodeModel, s, a, r, s′)
     r̂ = [Rϕ(vcat(vcat(s′[:, k]...), action)) for (k, action) in enumerate(a)]
     reward_loss = Flux.mse(hcat(r̂...), r)
     return reward_loss
 end
 
+
+function rewardLoss(m::DyNodeModel, S, A, R, S′)
+
+    Ŝ = Zygote.Buffer(S)
+    R̂ = Zygote.Buffer(R)
+
+    for j in collect(1:size(A)[3])
+
+        Ŝ[:,:,j], R̂[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])
+
+    #    Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
+    end
+
+    return Flux.mse(copy(R̂), R)
+
+end
+
+
+
+
+
+
 function dyNodeLoss(m::DyNodeModel, S, A, R, S′)
 
-    Ŝ = Zygote.Buffer(Array{Float64}(undef, p.state_size, p.batch_length, p.batch_size))
-    R̂ = Zygote.Buffer(Array{Float64}(undef, 1, p.batch_length, p.batch_size))
+    Ŝ = Zygote.Buffer(S)
+    R̂ = Zygote.Buffer(R)
 
-    for i in 1:p.batch_size
-        @show i
-        Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
+    for j in collect(1:size(A)[3])
 
+        Ŝ[:,:,j], R̂[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])
+
+    #    Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
     end
 
     return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(copy(S′) - copy(Ŝ)))
@@ -57,20 +57,33 @@ end
 
 
 
-# function transition(m::DyNodeModel, s, a, r, s′)
-#     # ŝ = Buffer(s, size(s))
-#     ŝ = []
-#     # @show ŝ
-#     #    buf = Buffer(xs, length(xs), 5)
-#     # @show typeof(ŝ)
-#     # @show typeof(ŝ[1])
-#     state = s[:, 1]
-#     for (i, action) in enumerate(a)
-#         state = fθ(vcat(vcat(state...), action))
-#         # @show i
-#         # @show ŝ[i]
-#         # @show typeof(state)
-#         # @show vec(reduce(hcat, state))
-#     end
-#     return ŝ
-# end
+function transition(s, a, r)
+
+    ŝ = Zygote.Buffer(s)
+    r̂ = Zygote.Buffer(r)
+    state = s[:,1]
+    for i in collect(1:length(a))
+        state = euler(state, a[:,i])
+        ŝ[:,i] = state
+        r̂[:,i] = Rϕ(vcat(s[:,i], a[:,i]))
+    end
+    
+    # r̂ = Zygote.Buffer(Array{Float64}(undef, 1, p.batch_length))
+
+    # for (i, action) in enumerate(a)
+
+    #     state = solveDyNodeStep(fθ, state, action)
+    #     ŝ[:,i] = state
+    #     reward = Rϕ(vcat(vcat(s′[:,i]...), action))
+    #     r̂[:,i] = reward
+    # end
+
+    # return (copy(ŝ), copy(r̂))
+    return copy(ŝ), copy(r̂)
+end
+
+
+function euler(s, a)
+    x = vcat(s, a)
+    return s + 0.001 * fθ(x)
+end

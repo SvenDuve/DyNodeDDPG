@@ -120,6 +120,4 @@ function dyNode(m::DyNodeModel, pms::Parameter)
         end
     end
 
-    return fθ, Rϕ, 𝒟
-
 end
