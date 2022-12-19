@@ -8,14 +8,16 @@ function train(agent::DDPGAgent)
     V′ = Qθ′(vcat(S′, A′))
     Y = R + p.γ * V′
 
-
+    # critic
     θ = params(Qθ)
     dθ = gradient(() -> lossCritic(Y, S, A), θ)
-    update!(opt_critic, params(Qθ), dθ)
+    update!(Optimise.Adam(p.η_critic), params(Qθ), dθ)
 
+    # actor
     ϕ = params(μϕ)
     dϕ = gradient(() -> -maxActor(S), ϕ)
-    update!(opt_actor, params(μϕ), dϕ)
+    update!(Optimise.Adam(p.η_actor), params(μϕ), dϕ)
+
 
     for (base, target) in zip(params(Qθ), params(Qθ′))
         target .= p.τ * base .+ (1 - p.τ) * target
@@ -34,22 +36,20 @@ function train(m::DyNodeModel)
 
     model_loss = []
     reward_loss = []
-    # for i in 1:p.batch_size
 
-    #     Ŝ[:,:,i], R̂[:,:,i] = transition(S[:,:,i], A[:,:,i], R[:,:,i], S′[:,:,i])
-
-    # end
-
-
-    dθ = gradient(() -> dyNodeLoss(m, S, A, R, S′), params(fθ))
-    update!(Optimise.Adam(0.005), params(fθ), dθ)
+    for i in 1:p.batch_size
+    
+        dθ = gradient(() -> dyNodeLoss(m, S[:,:,i], A[:,:,i], R[:,:,i], S′[:,:,i]), params(fθ))
+        update!(Optimise.Adam(0.005), params(fθ), dθ)
 
 
-    dϕ = gradient(() -> rewardLoss(m, S, A, R, S′), params(Rϕ))
-    update!(Optimise.Adam(0.005), params(Rϕ), dϕ)
+        dϕ = gradient(() -> rewardLoss(m, S[:,:,i], A[:,:,i], R[:,:,i], S′[:,:,i]), params(Rϕ))
+        update!(Optimise.Adam(0.005), params(Rϕ), dϕ)
 
-    append!(model_loss, dyNodeLoss(m, S, A, R, S′))
-    append!(reward_loss, rewardLoss(m, S, A, R, S′))
+        append!(model_loss, dyNodeLoss(m, S[:,:,i], A[:,:,i], R[:,:,i], S′[:,:,i]))
+        append!(reward_loss, rewardLoss(m, S[:,:,i], A[:,:,i], R[:,:,i], S′[:,:,i]))
+    
+    end
 
     @show mean(model_loss)
     @show mean(reward_loss)
@@ -57,8 +57,6 @@ function train(m::DyNodeModel)
     return model_loss, reward_loss
 
 end
-
-
 
 
 

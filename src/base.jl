@@ -15,6 +15,7 @@
     critic_hidden::Array = [(200, 200)]
     actor_hidden::Array = [(200, 200)]
     reward_hidden::Array = [(200, 200)]
+    dynode_hidden::Array = [(200, 200)]
     γ::Float64 = 0.99
     τ::Float64 = 0.001
     η_actor::Float64 = 0.0001

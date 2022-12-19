@@ -1,6 +1,6 @@
 function lossCritic(Y::Matrix{Float64}, S::Matrix{Float32}, A::Matrix{Float64})
     V = Qθ(vcat(S, A))
-    (Y .- V) .^ 2 |> sum
+    (V .- Y) .^ 2 |> sum
 end
 
 
@@ -21,11 +21,7 @@ function rewardLoss(m::DyNodeModel, S, A, R, S′)
 
     R̂ = Zygote.Buffer(R)
 
-    for j in collect(1:size(A)[3])
-
-        R̂[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])[2]
-
-    end
+    R̂ = transition(S, A, R)[2]
 
     return Flux.mse(copy(R̂), R)
 
@@ -40,15 +36,10 @@ function dyNodeLoss(m::DyNodeModel, S, A, R, S′)
 
     Ŝ = Zygote.Buffer(S)
 
-    for j in collect(1:size(A)[3])
+    Ŝ = transition(S, A, R)[1]
 
-        Ŝ[:,:,j] = transition(S[:,:,j], A[:,:,j], R[:,:,j])[1]
-
-    #    Ŝ[:, :, i], R̂[:, :, i] = transition(S[:, :, i], A[:, :, i], R[:, :, i], S′[:, :, i])
-    end
-
-    # return (1 / p.batch_size) * (1 / p.batch_length) * sum(abs.(copy(Ŝ) - S′))
-    return sum(abs.(copy(Ŝ) - S′))
+    return (1 / p.state_size) * (1 / p.batch_length) * sum(abs.(copy(Ŝ) - S′))
+    # return sum(abs.(copy(Ŝ) - S′))
 
 end
 

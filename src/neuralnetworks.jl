@@ -33,13 +33,9 @@ end
 
 function setNetwork(nn::DyNodeModel) # Generate a NN to be solved with Euler updates
 
-    Chain(Dense(p.state_size + p.action_size, 200, elu),
-                Dense(200, 200, elu),
-                Dense(200, 200, elu),
-                Dense(200, 200, elu),
-                Dense(200, 2))
+    return Chain(Dense(p.state_size + p.action_size, p.dynode_hidden[1][1], elu),
+                Chain([Dense(el[1], el[2], elu) for el in p.dynode_hidden]...),
+                Dense(p.dynode_hidden[end][2], p.state_size))
 
-    # Chain(Dense(3, 10, elu),
-    #             Dense(10, 2))
 
 end

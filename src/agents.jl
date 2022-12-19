@@ -27,8 +27,8 @@ function trainAgent(agent::DDPGAgent, pms::Parameter)
 
     # set optimiszers
 
-    global opt_critic = Optimise.Adam(p.η_critic)
-    global opt_actor = Optimise.Adam(p.η_actor)
+    # global opt_critic = Optimise.Adam(p.η_critic)
+    # global opt_actor = Optimise.Adam(p.η_actor)
 
     # set training conditions
 
@@ -61,23 +61,6 @@ function trainAgent(agent::DDPGAgent, pms::Parameter)
 
     end
 
-    #@show ep.total_reward
-
-    # loop while some conditions
-
-    # interact with the environment by generating some Episode
-    # store episode in buffer
-
-    # create a minibatch from the buffer
-
-    # get all parameters for the loss functions
-
-    # Do gradient ascent/ descent on the loss functions
-
-    # update target for critic
-
-    # update target for actor
-
     return -1
 
 end #trainAgent
@@ -104,9 +87,6 @@ function dyNode(m::DyNodeModel, pms::Parameter)
     global fθ = setNetwork(m) # Code up a Network that will be solved with euler steps
     global Rϕ = setNetwork(Rewards())
 
-    # global optR = Flux.setup(Optimise.Adam(), Rϕ)#` and pass this `opt` to `train!
-    # global opt_model = Optimise.Adam(0.005)
-    # global opt_reward = Optimise.Adam(0.005)
 
     for i in 1:p.Sequences
         ep = Episode(env, m, p)()
@@ -122,5 +102,5 @@ function dyNode(m::DyNodeModel, pms::Parameter)
         append!(p.model_loss, model_loss)
         append!(p.reward_loss, reward_loss)
     end
-    return p
+    return p, fθ, Rϕ
 end
