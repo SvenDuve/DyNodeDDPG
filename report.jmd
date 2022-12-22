@@ -1,0 +1,177 @@
+---
+title: Issues
+author: SD
+date: 21st Dec 2022
+---
+
+
+# Introduction
+
+Just to introduce the state of play, and points of concern from my side. 
+
+# DDPG
+
+DDPG has been implemented and solves Open AI gym environments reasonable well. Reasonably because
+no fine tuning has been done yet. Also quite sure the code could be improved at certain points. Nevertheless, 
+the algorithm is understood and we can move on from here.
+
+Loading Ppackages:
+
+```julia
+using DyNodeDDPG
+using Statistics
+using Plots, DSP
+gr();
+```
+
+Solve Mountain Car Continuous, with very little tuning yet:
+
+```julia
+actor, pmss = trainAgent(DDPGAgent(), Parameter(environment="MountainCarContinuous-v0",
+    mem_size=100000,
+    critic_hidden=[(64, 64), (64, 64)],
+    actor_hidden=[(32, 32), (32, 32)],
+    batch_size=64,
+    max_episodes=200,
+    η_actor = 0.001,
+    η_critic = 0.001,
+    τ_actor=0.1,
+    τ_critic=0.025));
+```
+
+We get the following rewards:
+
+```julia
+plot([mean(pmss.total_rewards[i-9:i]) for i in collect(10:200)])
+```
+At the moment agent performance peaks out, then drops. Still investigating how to 
+exactly stop this.
+
+
+# DyNode Model
+
+The DyNode Implementation should be discussed. It loads in a similar way:
+
+```julia
+pmss, dynamics, reward = dyNode(DyNodeModel(), 
+                            Parameter(max_episodes_length=500, 
+                                        batch_size=1,
+                                        batch_length=40,
+                                        Sequences=400,
+                                        dT = 0.001, 
+                                        reward_hidden=[(32, 32), (32, 32)],
+                                        dynode_hidden=[(64, 64), (64, 64)]));
+
+```
+
+
+```julia
+
+meanModelLoss = [mean(pmss.model_loss[i-9:i]) for i in collect(10:400)]
+meanRewardLoss = [mean(pmss.reward_loss[i-9:i]) for i in collect(10:400)]
+
+
+plot(meanModelLoss, c=:red)
+plot!(twinx(), meanRewardLoss, c=:green)
+
+
+```
+
+Problem with the model: Prediction errors are accumulating dramatically.
+
+## MPC simple example
+
+Calling libraries:
+
+```julia
+using Conda
+using PyCall
+
+gym = pyimport("gym")
+env = gym.make("MountainCarContinuous-v0")
+```
+
+
+In MPC we sample random action sequences, then make predictions on rewars and
+next state:
+
+
+```julia 
+K = 5
+
+A = []
+
+for k in 1:K  
+    append!(A, [2 .* (rand(5) .- 0.5)]) # rand samples uniformly [0,1]
+end
+
+```
+
+
+```julia
+
+R = []
+r = []
+S′ = []
+s′ = []
+
+for Seq in A
+    s = env.reset()
+    for a in Seq
+      #for each random action, get the rewards
+        append!(r, reward(vcat(s, a)) |> first)
+        s = dynamics(vcat(s, a))
+        append!(s′, s)
+    end
+    append!(R, sum(r))
+    append!(S′, s′)
+    s′ = []
+    r = []
+end
+
+```
+
+State sequences based on the model:
+
+```julia
+display(reshape(S′, (2, 5, 5)))
+```
+
+
+I think there is strong divergence.
+
+
+
+```julia
+display(R)
+act = A[argmax(R)][1] # next action based on argmax
+```
+
+
+# To do list
+
+- Understand why the function convergence suddenly drops off
+  - Overfit? Reduce network size?
+  - Adjust parameters with increasing step size, ie. reduce optimiser or base, target factorial
+  - Check exploration function, ie. random action selection...
+
+- Understand lack of convergence for the dynode method
+  - Double check again the solver, perhaps try RK4
+  - Transisition function makes sense:
+
+  ```julia
+  function transition(s, a, r)
+    # This is DyNode
+    ŝ = Zygote.Buffer(s)
+    r̂ = Zygote.Buffer(r)
+    state = s[:,1]
+    for i in collect(1:length(a))
+        state = euler(state, a[:,i])
+        ŝ[:,i] = state
+        r̂[:,i] = Rϕ(vcat(s[:,i], a[:,i]))
+    end
+    
+    return copy(ŝ), copy(r̂)
+  end
+  ```
+  
