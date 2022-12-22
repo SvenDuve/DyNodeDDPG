@@ -16,16 +16,18 @@
     actor_hidden::Array = [(200, 200)]
     reward_hidden::Array = [(200, 200)]
     dynode_hidden::Array = [(200, 200)]
-    γ::Float64 = 0.99
-    τ::Float64 = 0.001
+    γ::Float64 = 0.999
+    τ_actor::Float64 = 0.1
+    τ_critic::Float64 = 0.5
     η_actor::Float64 = 0.0001
-    η_critic::Float64 = 0.001
+    η_critic::Float64 = 0.01
     Sequences::Int = 10
     H::Int = 200
     m::Int = 1000
     dT::Float64 = 0.01
     model_loss::Array = []
     reward_loss::Array = []
+    total_rewards::Array = []
 end
 
 

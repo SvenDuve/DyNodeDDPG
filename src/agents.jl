@@ -20,19 +20,6 @@ function trainAgent(agent::DDPGAgent, pms::Parameter)
     global μϕ = setNetwork(Actor())
     global μϕ′ = deepcopy(μϕ)
 
-    # copy actor
-    #@show Qθ, μϕ
-
-
-
-    # set optimiszers
-
-    # global opt_critic = Optimise.Adam(p.η_critic)
-    # global opt_actor = Optimise.Adam(p.η_actor)
-
-    # set training conditions
-
-    # global ou = OrnsteinUhlenbeck(0.0f0, 0.15f0, 0.2f0, [0.0f0])
 
     scores = zeros(100)
     e = 1
@@ -56,12 +43,16 @@ function trainAgent(agent::DDPGAgent, pms::Parameter)
         scores[idx] = ep.total_reward
         idx = idx % 100 + 1
         avg = mean(scores)
-        println("Episode: $e | Score: $(ep.total_reward) | Avg score: $avg | Frames: $(p.frames)")
+        if (e-1) % 10 == 0
+            println("Episode: $e | Score: $(ep.total_reward) | Avg score: $avg | Frames: $(p.frames)")
+        end
         e += 1
+
+        append!(p.total_rewards, ep.total_reward)
 
     end
 
-    return -1
+    return μϕ, p
 
 end #trainAgent
 
@@ -104,3 +95,5 @@ function dyNode(m::DyNodeModel, pms::Parameter)
     end
     return p, fθ, Rϕ
 end
+
+
