@@ -105,46 +105,40 @@ for k in 1:K
     append!(A, [2 .* (rand(5) .- 0.5)]) # rand samples uniformly [0,1]
 end
 
+display(A)
+
 ```
 
 
 ```julia
 
-R = []
-r = []
-S′ = []
-s′ = []
-
 for Seq in A
     s = env.reset()
+    global r = []
+    s′ = []
     for a in Seq
       #for each random action, get the rewards
         append!(r, reward(vcat(s, a)) |> first)
         s = dynamics(vcat(s, a))
         append!(s′, s)
     end
-    append!(R, sum(r))
-    append!(S′, s′)
-    s′ = []
-    r = []
+    println("Sum of Rewards: $(sum(r))")
+    println("Next States: ")
+    display(reshape(s′, (2, 5)))
 end
 
 ```
 
-State sequences based on the model:
 
-```julia
-display(reshape(S′, (2, 5, 5)))
-```
+We can detect strong divergence think there is strong divergence.
 
-
-I think there is strong divergence.
+Remark: After our session on Thursday I think I found a reason for this. Let me investigate and revert.
 
 
 
 ```julia
-display(R)
-act = A[argmax(R)][1] # next action based on argmax
+display(r)
+act = A[argmax(r)][1] # next action based on argmax
 ```
 
 
@@ -157,21 +151,12 @@ act = A[argmax(R)][1] # next action based on argmax
 
 - Understand lack of convergence for the dynode method
   - Double check again the solver, perhaps try RK4
-  - Transisition function makes sense:
-
-  ```julia
-  function transition(s, a, r)
-    # This is DyNode
-    ŝ = Zygote.Buffer(s)
-    r̂ = Zygote.Buffer(r)
-    state = s[:,1]
-    for i in collect(1:length(a))
-        state = euler(state, a[:,i])
-        ŝ[:,i] = state
-        r̂[:,i] = Rϕ(vcat(s[:,i], a[:,i]))
-    end
-    
-    return copy(ŝ), copy(r̂)
-  end
+  - Check Transisition function to cope with arrays and singular values.
   ```
   
+# To do extended as per discussion on the 22nd of Dec:
+
+- increase Buffer Size and see impact on convergence behaviour
+- implement on-line mode NODE(That was one of the first test implementations, but does not solve trajectories, but only next step)
+- investigate impact of setting ΔT to 1, as this cant be the solution...
+- check higher batch size, ie. 128

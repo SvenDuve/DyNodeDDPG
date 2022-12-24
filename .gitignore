@@ -23,9 +23,8 @@ docs/site/
 # environment.
 Manifest.toml
 
-#playground.jl
+playground.jl
 workingNode.jl
 luxNode.jl
 sciml.ipynb
-report.tex
-jl_eyvSNg
+report.jmd
