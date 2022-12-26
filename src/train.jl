@@ -58,3 +58,20 @@ function train(m::DyNodeModel)
 end
 
 
+
+function train(m::NodeModel)
+
+    S, A, R, S′ = sampleBuffer(m)
+
+    
+    dθ = gradient(() -> nodeLoss(m, S, A, R, S′), params(fθ))
+    update!(Optimise.Adam(0.001), params(fθ), dθ)
+
+    dϕ = gradient(() -> rewardLoss(m, S, A, R, S′), params(Rϕ))
+    update!(Optimise.Adam(0.001), params(Rϕ), dϕ)
+
+
+    return nodeLoss(m, S, A, R, S′), rewardLoss(m, S, A, R, S′)
+
+end
+

@@ -8,15 +8,17 @@
     action_bound_low::Array = [-1.0]
     batch_size::Int = 128
     batch_length::Int = 40
-    mem_size::Int = 100000
+    mem_size::Int = 1000000
     frames::Int = 0
+    train_start::Int = 1000 
     max_episodes::Int = 2000
     max_episodes_length::Int = 1000
     critic_hidden::Array = [(200, 200)]
     actor_hidden::Array = [(200, 200)]
     reward_hidden::Array = [(200, 200)]
     dynode_hidden::Array = [(200, 200)]
-    γ::Float64 = 0.999
+    γ::Float64 = 0.99
+    noise_type::String = "gaussian"
     τ_actor::Float64 = 0.1
     τ_critic::Float64 = 0.5
     η_actor::Float64 = 0.0001
@@ -34,6 +36,7 @@ end
 
 
 function resetParameters(p)
+    
     newP = Parameter(p; state_size=env.observation_space.shape[1],
         action_size=env.action_space.shape[1],
         action_bound=env.action_space.high[1],
@@ -57,6 +60,16 @@ mutable struct DyNodeModel
     train::Bool
 
     function DyNodeModel(train=true)
+        new(train)
+    end
+
+end
+
+mutable struct NodeModel
+
+    train::Bool
+
+    function NodeModel(train=true)
         new(train)
     end
 
@@ -89,14 +102,36 @@ mutable struct OrnsteinUhlenbeck
 end
 
 
+
+
+mutable struct GaussianNoise
+    μ
+    σ
+end
+
+
+
+
+
+
 function 𝒩(ou::OrnsteinUhlenbeck)
     dx = ou.θ .* (ou.μ .- ou.X)
     dx = dx .+ ou.σ .* randn(Float32, length(ou.X))
     ou.X = ou.X .+ dx
 end
 
+function 𝒩(gn::GaussianNoise)
+    rand(Normal(gn.μ, gn.σ))
+end
 
-global ou = OrnsteinUhlenbeck(0.0f0, 0.15f0, 0.2f0, [0.0f0])
+
+function setNoise(p::Parameter) 
+    if p.noise_type == "gaussian"
+        global noise = GaussianNoise(0.0f0, 0.1f0)
+    else
+        global noise = OrnsteinUhlenbeck(0.0f0, 0.15f0, 0.5f0, [0.0f0])
+    end
+end
 
 
 mutable struct Episode
@@ -155,12 +190,18 @@ end
 
 
 function action(π::DDPGAgent, s::Vector{Float32}, p::Parameter)
-    vcat(clamp.(μϕ(s) .+ vcat([𝒩(ou) for i in 1:p.action_size]...) * π.train, -p.action_bound, p.action_bound)...)
+    vcat(clamp.(μϕ(s) .+ vcat([𝒩(noise) for i in 1:p.action_size]...) * π.train, -p.action_bound, p.action_bound)...)
 end
 
 
-
 function action(π::DyNodeModel, s::Vector{Float32}, p::Parameter)
+
+    # return [rand((el[1]:0.01:el[2])) |> Float32 for el in zip(p.action_bound_low, p.action_bound_high)]
+    return env.action_space.sample()
+end
+
+
+function action(π::NodeModel, s::Vector{Float32}, p::Parameter)
 
     # return [rand((el[1]:0.01:el[2])) |> Float32 for el in zip(p.action_bound_low, p.action_bound_high)]
     return env.action_space.sample()

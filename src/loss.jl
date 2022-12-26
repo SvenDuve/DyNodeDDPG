@@ -27,10 +27,6 @@ function rewardLoss(m::DyNodeModel, S, A, R, S′)
 end
 
 
-
-
-
-
 function dyNodeLoss(m::DyNodeModel, S, A, R, S′)
 
     Ŝ = Zygote.Buffer(S)
@@ -43,6 +39,25 @@ function dyNodeLoss(m::DyNodeModel, S, A, R, S′)
 
 end
 
+
+function rewardLoss(m::NodeModel, S, A, R, S′)
+
+    R̂ = Rϕ(vcat(S, A))
+
+    return Flux.mse(R̂, R)
+
+end
+
+
+
+
+function nodeLoss(m::NodeModel, S, A, R, S′)
+
+    Ŝ = fθ(vcat(S, A))
+
+    return Flux.mse(Ŝ, S′)
+
+end
 
 
 

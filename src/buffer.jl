@@ -19,6 +19,17 @@ function sampleBuffer(agent::DDPGAgent)
 end #sampleBuffer
 
 
+function sampleBuffer(m::NodeModel)
+    minibatch = sample(𝒟, p.batch_size)
+    X = hcat(minibatch...)
+    S = hcat(X[1, :]...)
+    A = hcat(X[2, :]...)
+    R = hcat(X[3, :]...)
+    S′ = hcat(X[4, :]...)
+    return (S, A, R, S′)
+end #sampleBuffer
+
+
 
 
 

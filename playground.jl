@@ -69,19 +69,39 @@ using Flux
 using Flux.Optimise
 using Zygote
 import Flux.params
+using Plots
 using Statistics
+gr()
 
 
-actor, pmss = trainAgent(DDPGAgent(), Parameter(environment="MountainCarContinuous-v0",
-    mem_size=100000,
-    critic_hidden=[(64, 64), (64, 64)],
-    actor_hidden=[(32, 32), (32, 32)],
-    batch_size=64,
-    max_episodes=200,
+actor, pmss = trainAgent(DDPGAgent(), Parameter(environment="Pendulum-v1",
+    train_start = 10000
+    max_episodes = 1000,
+    max_episodes_length = 200,
+    batch_size=128,
     η_actor = 0.001,
     η_critic = 0.001,
     τ_actor=0.1,
     τ_critic=0.025));
+
+# Assumption is this "solves" Pendulum, mean of the top 100 results were -17
+# Agent really starts learning form 200 to the 250th episode
+# This solver uses Gaussian Noise
+
+
+
+
+actor, pmss = trainAgent(DDPGAgent(), Parameter(environment="MountainCarContinuous-v0",
+    train_start = 10000,
+    max_episodes = 1000,
+    noise = "none",
+    batch_size=128,
+    η_actor = 0.001,
+    η_critic = 0.001,
+    τ_actor=0.1,
+    τ_critic=0.025));
+
+
 
 # best so far τ_actor = 0.2 and τ_critic = 0.05
 
@@ -94,7 +114,7 @@ pmss, dynamics, reward = dyNode(DyNodeModel(),
                                         batch_size=1,
                                         batch_length=40,
                                         Sequences=300,
-                                        dT = 0.001, 
+                                        dT = 0.025, 
                                         reward_hidden=[(32, 32), (32, 32)],
                                         dynode_hidden=[(64, 64), (64, 64)]));
 
@@ -110,9 +130,6 @@ plot!(twinx(), pmss.reward_loss)
 
 # dyNode(DyNodeModel(), Parameter(environment="BipedalWalker-v3", max_episodes_length=200))
 
-using Plots
-using Statistics
-gr()
 
 meanModelLoss = [mean(pmss.model_loss[i-9:i]) for i in collect(10:300)]
 meanRewardLoss = [mean(pmss.reward_loss[i-9:i]) for i in collect(10:300)]
@@ -120,6 +137,36 @@ meanRewardLoss = [mean(pmss.reward_loss[i-9:i]) for i in collect(10:300)]
 
 plot(meanModelLoss, c=:red)
 plot!(twinx(), meanRewardLoss, c=:green)
+
+
+
+
+p, fθ, Rϕ = NODEAgent(NodeModel(), Parameter(max_episodes_length=1000, 
+                            batch_size=64,
+                            Sequences=300,
+                            dT = 0.025, 
+                            reward_hidden=[(32, 32), (32, 32)]))
+
+
+
+meanModelLoss = [mean(p.model_loss[i-9:i]) for i in collect(10:300)]
+meanRewardLoss = [mean(p.reward_loss[i-9:i]) for i in collect(10:300)]
+
+
+plot(meanModelLoss, c=:red)
+plot!(twinx(), meanRewardLoss, c=:green)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 using Conda
@@ -226,16 +273,58 @@ eulers_method(df_, u0, a, b, n)
 
 
 
+using Pkg
+Pkg.activate(".")
+using DyNodeDDPG
+using Flux
+using Flux.Optimise
+using Zygote
+import Flux.params
+using Statistics
+using DiffEqFlux
+using DifferentialEquations, NNlib
+
+
+f̂ = setNode(NodeModel(), Parameter())
+
+p, fθ, Rϕ = NODEAgent(NodeModel(), Parameter(max_episodes_length=1000, 
+                            batch_size=64,
+                            Sequences=50,
+                            dT = 0.025, 
+                            reward_hidden=[(32, 32), (32, 32)]))
+
+
+S, A, R, S′ = sampleBuffer(NodeModel())
+
+
+f̂(vcat(S, A))
+
+down = Dense(2 + 1, 10)
+dudt = Chain(Dense(10, 10, elu),
+        Dense(10, 10, elu),
+        Dense(10, 10, elu),
+        Dense(10, 10))
+fc = Dense(10, 2)
+
+nn_ode = NeuralODE(dudt, (0.0f0, 0.025), 
+                    Tsit5(), 
+                    save_everystep=false, 
+                    reltol=1e-3, 
+                    abstol=1e-3, 
+                    save_start=false)
 
 
 
+f̂(vcat(S, A))
 
+
+down(vcat(S, A)) |> dudt |> fc
+x = down(vcat(S, A)) |> nn_ode |> first |> fc
 
 
 
 
 using Flux
-
 df_ = Chain(Dense(3, 10, elu), Dense(10, 2))
 
 

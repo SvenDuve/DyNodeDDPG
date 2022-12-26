@@ -7,6 +7,13 @@ function trainAgent(agent::DDPGAgent, pms::Parameter)
 
     global p = resetParameters(pms)
 
+    setNoise(p)
+    # if p.noise == "gaussian"
+    #     global noise = GaussianNoise(0.0f0, 0.1f0)
+    # else
+    #     global noise = OrnsteinUhlenbeck(0.0f0, 0.15f0, 0.5f0, [0.0f0])
+    # end
+
     # set buffer
     global 𝒟 = []
 
@@ -34,11 +41,13 @@ function trainAgent(agent::DDPGAgent, pms::Parameter)
             remember(p.mem_size, s, a, r, s′, t)
             p.frames += 1
 
-            if length(𝒟) >= p.batch_size# && π.train
+            # if length(𝒟) >= p.train_start# && π.train
+            if p.frames >= p.train_start# && π.train
                 train(agent)
             end
-
+            
         end
+        
 
         scores[idx] = ep.total_reward
         idx = idx % 100 + 1
@@ -70,6 +79,7 @@ function dyNode(m::DyNodeModel, pms::Parameter)
     global env = gym.make(pms.environment)
     global p = resetParameters(pms)
 
+    #setNoise(p)
 
     # set buffer
     global 𝒟 = []
@@ -94,6 +104,50 @@ function dyNode(m::DyNodeModel, pms::Parameter)
         append!(p.reward_loss, reward_loss)
     end
     return p, fθ, Rϕ
+end
+
+
+
+
+
+function NODEAgent(m::NodeModel, pms::Parameter)
+
+    # To Do's:
+    # to set up dynode_batch_size -> 64 in the paper
+
+    # interactions with the real World
+
+
+    gym = pyimport("gym")
+    global env = gym.make(pms.environment)
+    global p = resetParameters(pms)
+
+    #setNoise(p)
+    #@show noise
+
+    # set buffer
+    global 𝒟 = []
+
+    global fθ = setNode(m, p)
+    global Rϕ = setNetwork(Rewards())
+
+
+    for i in 1:p.Sequences
+        ep = Episode(env, m, p)()
+        for (s, a, r, s′, t) in ep.episode
+            remember(p.mem_size, s, a, r, s′, t)
+        end
+
+        model_loss, reward_loss = train(m)
+        if i % 10 == 0
+            println("Iteration $i")
+        end
+        append!(p.model_loss, model_loss)
+        append!(p.reward_loss, reward_loss)
+    end
+    
+    return p, fθ, Rϕ
+
 end
 
 
